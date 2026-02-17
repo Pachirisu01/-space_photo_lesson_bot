@@ -1,11 +1,11 @@
 import os
 import argparse
 import requests
-from general_utils import create_folder, download_image, get_file_extension
+from general_utils import download_image, get_file_extension
 
 
 def fetch_spacex_images(launch_id=None, folder="images", count=10):
-    create_folder(folder)
+    os.makedirs(folder, exist_ok=True)
 
     if launch_id:
         url = f"https://api.spacexdata.com/v4/launches/{launch_id}"
@@ -26,23 +26,29 @@ def fetch_spacex_images(launch_id=None, folder="images", count=10):
         if not image_urls:
             return False
 
-        for i, image_url in enumerate(image_urls, 1):
+        for img_number, image_url in enumerate(image_urls, 1):
             ext = get_file_extension(image_url)
-            filename = f"spacex_{i:03d}{ext}"
+            filename = f"spacex_{img_number:03d}{ext}"
             filepath = os.path.join(folder, filename)
             if download_image(image_url, filepath):
-                print(f"spacex_{i:03d}{ext}")
+                print(f"spacex_{img_number:03d}{ext}")
 
         return True
-    except Exception:
+    except (requests.exceptions.RequestException, ValueError, KeyError, TypeError) as e:
+        print(f"Ошибка при получении изображений SpaceX: {e}")
         return False
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--id', default=None)
-    parser.add_argument('--folder', default='images')
-    parser.add_argument('--count', type=int, default=10)
+    parser = argparse.ArgumentParser(
+        description="Скачивает изображения Earth Polychromatic Imaging Camera (EPIC) с NASA EPIC API"
+    )
+    parser.add_argument('--count', type=int, default=10,
+                        help='количество изображений (По умолчанию 10')
+    parser.add_argument('--date',
+                        help='конкретная дата в формате YYYY-MM-DD')
+    parser.add_argument('--folder', default='images',
+                        help='папка для сохранения(По умолчанию папка images ')
 
     args = parser.parse_args()
 
