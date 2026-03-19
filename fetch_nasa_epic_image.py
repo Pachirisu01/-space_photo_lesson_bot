@@ -2,71 +2,95 @@ import os
 import argparse
 import requests
 from datetime import datetime
-from general_utils import  download_image, get_file_extension
+from general_utils import get_file_extension
 
 
-def fetch_nasa_epic(api_key, count=10, date=None, folder="images"):
-    os.makedirs(folder, exist_ok=True)
+def fetch_epic_metadata(api_key, date=None):
+    url = "https://api.nasa.gov/EPIC/api/natural/images"
+    params = {"api_key": api_key}
+    if date:
+        params["date"] = date
 
-    try:
-        url = "https://api.nasa.gov/EPIC/api/natural/images"
-        params = {"api_key": api_key}
-        if date:
-            params["date"] = date
-
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Ошибка при запросе к EPIC API: {e}")
-        return False
-    except ValueError as e:
-        print(f"Ошибка парсинга JSON: {e}")
-        return False
-
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
     if not data:
-        return False
+        raise ValueError("API вернул пустой список изображений")
+    return data
 
+
+def build_epic_urls(metadata, count):
     base_urls = []
-    for item in data[:count]:
-        try:
-            date_str = item["date"]
-            image_name = item["image"]
-            date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-            year = date_obj.strftime("%Y")
-            month = date_obj.strftime("%m")
-            day = date_obj.strftime("%d")
-            base_url = f"https://api.nasa.gov/EPIC/archive/natural/{year}/{month}/{day}/png/{image_name}.png"
-            base_urls.append(base_url)
-        except (KeyError, ValueError, TypeError) as e:
-            print(f"Пропущено изображение из-за ошибки: {e}")
+    for item in metadata[:count]:
+        if "date" not in item or "image" not in item:
+            print("Пропущено изображение: отсутствуют ключи 'date' или 'image'")
             continue
 
-    if not base_urls:
-        return False
+        date_str = item["date"]
+        image_name = item["image"]
 
-
-    session = requests.Session()
-    for img_number, base_url in enumerate(base_urls, 1):
         try:
-            params = {"api_key": api_key}
-            response = session.get(base_url, params=params, stream=True, timeout=10)
-            response.raise_for_status()
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError):
+            print(f"Пропущено изображение: неверный формат даты '{date_str}'")
+            continue
 
-            ext = get_file_extension(base_url)
+        year = date_obj.strftime("%Y")
+        month = date_obj.strftime("%m")
+        day = date_obj.strftime("%d")
+        url = f"https://api.nasa.gov/EPIC/archive/natural/{year}/{month}/{day}/png/{image_name}.png"
+        base_urls.append(url)
+
+    return base_urls
+
+
+def download_epic_image(urls, api_key, folder):
+    downloaded = 0
+    with requests.Session() as session:
+        for img_number, url in enumerate(urls, 1):
+            params = {"api_key": api_key}
+            try:
+                response = session.get(url, params=params, stream=True, timeout=10)
+            except requests.exceptions.RequestException as e:
+                print(f"Ошибка при запросе {url}: {e}")
+                continue
+
+            if not response.ok:
+                print(f"Ошибка при скачивании {url}: HTTP {response.status_code}")
+                continue
+
+            ext = get_file_extension(url)
             filename = f"epic_{img_number:03d}{ext}"
             filepath = os.path.join(folder, filename)
 
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+            try:
+                with open(filepath, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+            except OSError as e:
+                print(f"Ошибка записи файла {filename}: {e}")
+                continue
 
-            print(f"epic_{img_number:03d}{ext}")
-        except requests.exceptions.RequestException as e:
-            print(f"Ошибка при скачивании {base_url}: {e}")
-            continue
+            print(filename)
+            downloaded += 1
 
-    return True
+    return downloaded
+
+
+def fetch_nasa_epic(api_key, count=10, date=None, folder="images"):
+    abs_folder = os.path.abspath(folder)
+    print(f"Создаю/проверяю папку: {abs_folder}")
+    os.makedirs(folder, exist_ok=True)
+
+    metadata = fetch_epic_metadata(api_key, date)
+    urls = build_epic_urls(metadata, count)
+
+    if not urls:
+        return False
+
+    downloaded = download_epic_image(urls, api_key, folder)
+    return downloaded > 0
+
 def main():
     parser = argparse.ArgumentParser(
         description="Скачивает изображения с NASA EPIC API"
@@ -83,9 +107,16 @@ def main():
     if not api_key:
         print("Ошибка: необходимо установить переменную окружения NASA_API_KEY")
         return
+    try:
+        if not fetch_nasa_epic(api_key=api_key, count=args.count, date=args.date, folder=args.folder):
+           print("Не удалось получить изображения NASA EPIC")
+    except requests.exceptions.RequestException as e:
+        print(f"Ошибка при запросе к EPIC API: {e}")
+    except ValueError as e:
+        print(f"Ошибка обработки данных: {e}")
+    except Exception as e:
+        print(f"Непредвиденная ошибка: {e}")
 
-    if not fetch_nasa_epic(api_key=api_key, count=args.count, date=args.date, folder=args.folder):
-        print("Не удалось получить изображения NASA EPIC")
 
 if __name__ == '__main__':
     main()
