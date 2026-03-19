@@ -11,16 +11,27 @@ bot = telegram.Bot(token=TOKEN)
 
 chat_id = os.getenv("CHAT_ID")
 
-delay_hours_str = os.getenv("DELAY_HOURS")
+    delay_hours = float(os.getenv("DELAY_HOURS", 0)) * 3600
 
-while True:
-    try:
-        delay_hours = float(delay_hours_str)
-        images = os.listdir("images")
-        with open(os.path.join('images', random.choice(images)), 'rb') as photo:
-            bot.send_photo(chat_id=chat_id, photo=photo, caption='New photo in channel!')
-        time.sleep(delay_hours * 3600)
-    except KeyboardInterrupt:
-        break
-    except Exception:
-        time.sleep(60)
+    while True:
+        try:
+            images = os.listdir("images")
+            if not images:
+                raise FileNotFoundError
+            with open(os.path.join('images', random.choice(images)), 'rb') as photo:
+                bot.send_photo(chat_id=chat_id, photo=photo, caption='New photo in channel!')
+            time.sleep(delay_hours)
+        except FileNotFoundError:
+            print("Папка images пуста, повтор через 60с")
+            time.sleep(60)
+        except PermissionError:
+            print("Нет доступа к папке, повтор через 60с")
+            time.sleep(60)
+        except telegram.error.TelegramError as e:
+            print(f"Ошибка Telegram: {e}, повтор через 60с")
+            time.sleep(60)
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print(f"Неожиданная ошибка: {e}, повтор через 60с")
+            time.sleep(60)
