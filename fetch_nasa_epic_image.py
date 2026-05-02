@@ -44,7 +44,7 @@ def build_epic_urls(metadata, count):
     return base_urls
 
 
-def download_epic_image(urls, api_key, folder):
+def download_epic_images(urls, api_key, folder):
     downloaded = 0
     with requests.Session() as session:
         for img_number, url in enumerate(urls, 1):
@@ -88,7 +88,7 @@ def fetch_nasa_epic(api_key, count=10, date=None, folder="images"):
     if not urls:
         return False
 
-    downloaded = download_epic_image(urls, api_key, folder)
+    downloaded = download_epic_images(urls, api_key, folder)
     return downloaded > 0
 
 def main():
