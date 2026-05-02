@@ -10,7 +10,9 @@ def download_image(url, filepath):
         with open(filepath, 'wb') as f:
             f.write(response.content)
         return True
-    except Exception:
+    except requests.exceptions.RequestException:
+        return False
+    except (OSError, IOError):
         return False
 
 
