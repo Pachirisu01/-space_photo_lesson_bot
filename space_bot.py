@@ -2,14 +2,14 @@ import os, random, telegram, time
 from dotenv import load_dotenv
 
 
-load_dotenv()
+if __name__ == '__main__':
+    load_dotenv()
 
+    TOKEN = os.getenv("TG_TOKEN")
 
-TOKEN = os.getenv("TOKEN")
+    bot = telegram.Bot(token=TOKEN)
 
-bot = telegram.Bot(token=TOKEN)
-
-chat_id = os.getenv("CHAT_ID")
+    chat_id = os.getenv("TG_CHAT_ID")
 
     delay_hours = float(os.getenv("DELAY_HOURS", 0)) * 3600
 
