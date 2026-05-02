@@ -46,34 +46,16 @@ def build_epic_urls(metadata, count):
 
 def download_epic_images(urls, api_key, folder):
     downloaded = 0
-    with requests.Session() as session:
-        for img_number, url in enumerate(urls, 1):
-            params = {"api_key": api_key}
-            try:
-                response = session.get(url, params=params, stream=True, timeout=10)
-            except requests.exceptions.RequestException as e:
-                print(f"Ошибка при запросе {url}: {e}")
-                continue
-
-            if not response.ok:
-                print(f"Ошибка при скачивании {url}: HTTP {response.status_code}")
-                continue
-
-            ext = get_file_extension(url)
-            filename = f"epic_{img_number:03d}{ext}"
-            filepath = os.path.join(folder, filename)
-
-            try:
-                with open(filepath, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-            except OSError as e:
-                print(f"Ошибка записи файла {filename}: {e}")
-                continue
-
+    for img_number, url in enumerate(urls, 1):
+        full_url = f"{url}?api_key={api_key}"
+        ext = get_file_extension(url)
+        filename = f"epic_{img_number:03d}{ext}"
+        filepath = os.path.join(folder, filename)
+        if download_image(full_url, filepath):
             print(filename)
             downloaded += 1
-
+        else:
+            print(f"Ошибка при скачивании {full_url}")
     return downloaded
 
 
