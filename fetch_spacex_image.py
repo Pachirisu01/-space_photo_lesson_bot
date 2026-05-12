@@ -34,10 +34,9 @@ def fetch_spacex_images(folder="images", count=10):
         ext = get_file_extension(image_url)
         filename = f"spacex_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
-        if download_image(image_url, filepath):
-            print(f"spacex_{img_number:03d}{ext}")
-        else:
-            print(f"Не удалось скачать {image_url}")
+        if not download_image(image_url, filepath):
+            raise RuntimeError(f"Не удалось скачать {image_url}")
+        print(f"spacex_{img_number:03d}{ext}")
 
     return True
 
@@ -52,8 +51,12 @@ def main():
                         help='папка для сохранения(По умолчанию папка images ')
     args = parser.parse_args()
 
-    if not fetch_spacex_images(folder=args.folder, count=args.count):
-        print("Не удалось получить изображения SpaceX")
+    try:
+        fetch_spacex_images(folder=args.folder, count=args.count)
+    except (ConnectionError, ValueError, RuntimeError) as e:
+        print(f"Ошибка: {e}")
+    except Exception as e:
+        print(f"Непредвиденная ошибка: {e}")
 
 
 if __name__ == '__main__':

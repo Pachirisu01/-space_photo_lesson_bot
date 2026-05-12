@@ -2,7 +2,7 @@ import os
 import argparse
 import requests
 from datetime import datetime
-from general_utils import get_file_extension
+from general_utils import get_file_extension, download_image
 
 
 def fetch_epic_metadata(api_key, date=None):
@@ -90,12 +90,13 @@ def main():
         print("Ошибка: необходимо установить переменную окружения NASA_API_KEY")
         return
     try:
-        if not fetch_nasa_epic(api_key=api_key, count=args.count, date=args.date, folder=args.folder):
-           print("Не удалось получить изображения NASA EPIC")
+        fetch_nasa_epic(api_key=api_key, count=args.count, date=args.date, folder=args.folder)
     except requests.exceptions.RequestException as e:
         print(f"Ошибка при запросе к EPIC API: {e}")
     except ValueError as e:
         print(f"Ошибка обработки данных: {e}")
+    except RuntimeError as e:
+        print(f"Ошибка при скачивании: {e}")
     except Exception as e:
         print(f"Непредвиденная ошибка: {e}")
 

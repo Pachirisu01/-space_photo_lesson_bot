@@ -5,6 +5,14 @@ from datetime import datetime, timedelta
 from general_utils import download_image, get_file_extension
 
 
+class NoImageError(Exception):
+    """Нет подходящего изображения для указанной даты."""
+    pass
+
+class APODRequestError(Exception):
+    """Ошибка при запросе к NASA API."""
+    pass
+
 def fetch_nasa_apod(api_key, count=1, date=None, folder="images"):
     os.makedirs(folder, exist_ok=True)
     apod_urls = []
@@ -19,16 +27,15 @@ def fetch_nasa_apod(api_key, count=1, date=None, folder="images"):
         if len(apod_urls) >= count:
             break
 
+        url = "https://api.nasa.gov/planetary/apod"
+        params = {
+            "api_key": api_key,
+            "date": check_date.strftime("%Y-%m-%d")
+        }
+
         try:
-            url = "https://api.nasa.gov/planetary/apod"
-            params = {
-                "api_key": api_key,
-                "date": check_date.strftime("%Y-%m-%d")
-            }
             response = requests.get(url, params=params, timeout=10)
-            if not response.ok:
-                print(f"HTTP {response.status_code} для {check_date.strftime('%Y-%m-%d')}")
-                continue
+            response.raise_for_status()
             data = response.json()
 
             if data.get('media_type') != 'image':
@@ -36,29 +43,27 @@ def fetch_nasa_apod(api_key, count=1, date=None, folder="images"):
             image_url = data.get('url')
             if not image_url:
                 continue
+
             apod_urls.append(image_url)
 
+        except requests.exceptions.HTTPError as e:
+            raise APODRequestError(f"HTTP ошибка для {check_date.strftime('%Y-%m-%d')}: {e}")
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка запроса для даты {check_date.strftime('%Y-%m-%d')}: {e}")
-            continue
-        except ValueError as e:
-            print(f"Ошибка обработки JSON для даты {check_date.strftime('%Y-%m-%d')}: {e}")
-            continue
-        except (KeyError, TypeError, AttributeError) as e:
-            print(f"Ошибка данных для даты {check_date.strftime('%Y-%m-%d')}: {e}")
-            continue
+            raise APODRequestError(f"Ошибка запроса для {check_date.strftime('%Y-%m-%d')}: {e}")
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            raise APODRequestError(f"Ошибка данных для {check_date.strftime('%Y-%m-%d')}: {e}")
 
     if not apod_urls:
-        return False
+        raise NoImageError("Не найдено ни одного изображения за указанный период")
 
     for img_number, image_url in enumerate(apod_urls[:count], 1):
         ext = get_file_extension(image_url)
         filename = f"apod_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
-        if download_image(image_url, filepath):
-            print(f"apod_{img_number:03d}{ext}")
+        if not download_image(image_url, filepath):
+            raise RuntimeError(f"Не удалось скачать {image_url}")
+        print(f"apod_{img_number:03d}{ext}")
 
-    return True
 
 def main():
     parser = argparse.ArgumentParser(
@@ -87,11 +92,13 @@ def main():
     else:
         date_obj = None
 
-    if not fetch_nasa_apod(api_key=api_key,
-                           count=args.count,
-                           date=date_obj,
-                           folder=args.folder):
-        print("Не удалось получить изображения NASA APOD")
+    try:
+        fetch_nasa_apod(api_key=api_key, count=args.count, date=date_obj, folder=args.folder)
+    except (NoImageError, APODRequestError, RuntimeError) as e:
+        print(f"Ошибка: {e}")
+    except Exception as e:
+        print(f"Неожиданная ошибка: {e}")
+
 
 if __name__ == '__main__':
     main()
