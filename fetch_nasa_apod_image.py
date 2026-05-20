@@ -96,8 +96,8 @@ def main():
         fetch_nasa_apod(api_key=api_key, count=args.count, date=date_obj, folder=args.folder)
     except (NoImageError, APODRequestError, RuntimeError) as e:
         print(f"Ошибка: {e}")
-    except Exception as e:
-        print(f"Неожиданная ошибка: {e}")
+    except (OSError, requests.exceptions.RequestException) as e:
+        print(f"Системная или сетевая ошибка: {e}")
 
 
 if __name__ == '__main__':

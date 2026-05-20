@@ -32,6 +32,6 @@ if __name__ == '__main__':
             time.sleep(60)
         except KeyboardInterrupt:
             break
-        except Exception as e:
-            print(f"Неожиданная ошибка: {e}, повтор через 60с")
+        except (OSError, ValueError) as e:
+            print(f"Ошибка ввода-вывода или преобразования: {e}, повтор через 60с")
             time.sleep(60)
