@@ -1,20 +1,11 @@
 import os
 import requests
 
-
 def download_image(url, filepath):
-    try:
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
-        return True
-    except requests.exceptions.RequestException:
-        return False
-    except (OSError, IOError):
-        return False
-
+    response = requests.get(url, timeout=30)
+    response.raise_for_status()
+    with open(filepath, 'wb') as f:
+        f.write(response.content)
 
 def get_file_extension(url):
     _, ext = os.path.splitext(url.split("/")[-1])
