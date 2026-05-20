@@ -52,7 +52,6 @@ def download_epic_images(urls, api_key, folder):
         filename = f"epic_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
         if download_image(full_url, filepath):
-            print(filename)
             downloaded += 1
         else:
             print(f"Ошибка при скачивании {full_url}")
@@ -61,7 +60,6 @@ def download_epic_images(urls, api_key, folder):
 
 def fetch_nasa_epic(api_key, count=10, date=None, folder="images"):
     abs_folder = os.path.abspath(folder)
-    print(f"Создаю/проверяю папку: {abs_folder}")
     os.makedirs(folder, exist_ok=True)
 
     metadata = fetch_epic_metadata(api_key, date)
