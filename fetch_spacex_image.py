@@ -34,8 +34,7 @@ def fetch_spacex_images(folder="images", count=10):
         ext = get_file_extension(image_url)
         filename = f"spacex_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
-        if not download_image(image_url, filepath):
-            raise RuntimeError(f"Не удалось скачать {image_url}")
+        download_image(image_url, filepath):
         print(f"spacex_{img_number:03d}{ext}")
 
     return True

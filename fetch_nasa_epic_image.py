@@ -51,10 +51,7 @@ def download_epic_images(urls, api_key, folder):
         ext = get_file_extension(url)
         filename = f"epic_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
-        if download_image(full_url, filepath):
-            downloaded += 1
-        else:
-            print(f"Ошибка при скачивании {full_url}")
+        download_image(full_url, filepath):
     return downloaded
 
 

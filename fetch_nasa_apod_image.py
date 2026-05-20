@@ -60,8 +60,7 @@ def fetch_nasa_apod(api_key, count=1, date=None, folder="images"):
         ext = get_file_extension(image_url)
         filename = f"apod_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
-        if not download_image(image_url, filepath):
-            raise RuntimeError(f"Не удалось скачать {image_url}")
+        download_image(image_url, filepath):
         print(f"apod_{img_number:03d}{ext}")
 
 
