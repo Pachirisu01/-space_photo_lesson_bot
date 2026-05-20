@@ -3,6 +3,7 @@ import argparse
 import requests
 from datetime import datetime
 from general_utils import get_file_extension, download_image
+from general_utils import get_file_extension
 
 
 def fetch_epic_metadata(api_key, date=None):
@@ -10,7 +11,6 @@ def fetch_epic_metadata(api_key, date=None):
     params = {"api_key": api_key}
     if date:
         params["date"] = date
-
     response = requests.get(url, params=params, timeout=10)
     response.raise_for_status()
     data = response.json()
@@ -47,13 +47,21 @@ def build_epic_urls(metadata, count):
 def download_epic_images(urls, api_key, folder):
     downloaded = 0
     for img_number, url in enumerate(urls, 1):
-        full_url = f"{url}?api_key={api_key}"
+        params = {"api_key": api_key}
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Ошибка при скачивании {url}: {e}")
+            continue
         ext = get_file_extension(url)
         filename = f"epic_{img_number:03d}{ext}"
         filepath = os.path.join(folder, filename)
-        download_image(full_url, filepath):
+        with open(filepath, 'wb') as f:
+            f.write(response.content)
+        print(filename)
+        downloaded += 1
     return downloaded
-
 
 def fetch_nasa_epic(api_key, count=10, date=None, folder="images"):
     abs_folder = os.path.abspath(folder)
